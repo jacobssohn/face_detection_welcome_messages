@@ -1,9 +1,10 @@
 import face_recognition
-import os, sys, time
+import os, sys, time, random
 import cv2
 import numpy as np
 import math
 import playsound
+from chatgpt_wrapper import ChatGPT
 
 def face_confidence(face_distance, face_match_threshold=0.6):
     range = (1.0 - face_match_threshold)
@@ -27,6 +28,8 @@ class FaceRecognition:
     sound_timeout = False
     timeout_timer = 0
 
+    bot = ChatGPT()
+
     def __init__(self):
         self.encode_faces()
         self.encode_sounds()
@@ -45,9 +48,23 @@ class FaceRecognition:
     def encode_sounds(self):
 
         for sound in os.listdir('sounds'):
-            self.sounds.append(f'faces/{sound}')
+            self.sounds.append(f'sounds/{sound}')
 
         print(self.sounds)
+
+    def generate_prompt(self, person):
+        wordlist = ['welcome', 'good', 'bad', 'handsome', 'happy', 'cheerful', 'puzzled']
+        words = [wordlist[random.randint(1, len(wordlist)-1)] for _ in range(5)]
+        # words.append(person)
+        prompt = f'Write a welcome message for {person} using these words: '
+        for word in words:
+            prompt += word
+            prompt += ', '
+
+        return prompt
+
+    def generate_text(self, prompt):
+        return self.bot.ask(prompt)
 
     def run_recognition(self):
         video_capture = cv2.VideoCapture(0)
@@ -79,6 +96,10 @@ class FaceRecognition:
                         self.sound_timeout = True
 
                         playsound.playsound(self.sounds[best_match_index], block=False)
+
+                        person = self.known_face_names[best_match_index].split('.')[0]
+                        message = self.generate_text(self.generate_prompt(person))
+                        print(message)
 
                     elif time.time() - self.timeout_timer > 10:
                         self.sound_timeout = False
@@ -117,3 +138,6 @@ class FaceRecognition:
 if __name__ == '__main__':
     fr = FaceRecognition()
     fr.run_recognition()
+    bot = ChatGPT()
+    response = bot.ask('U gay boi')
+    print(response)
