@@ -3,8 +3,13 @@ import os, sys, time, random
 import cv2
 import numpy as np
 import math
+
+import openai.error
 import playsound
-from chatgpt_wrapper import ChatGPT
+# from chatgpt_wrapper import ChatGPT
+from chatGPT_API import GPTBot
+from gtts import gTTS
+
 
 def face_confidence(face_distance, face_match_threshold=0.6):
     range = (1.0 - face_match_threshold)
@@ -28,11 +33,11 @@ class FaceRecognition:
     sound_timeout = False
     timeout_timer = 0
 
-    bot = ChatGPT()
 
     def __init__(self):
         self.encode_faces()
         self.encode_sounds()
+        self.bot = GPTBot()
 
     def encode_faces(self):
 
@@ -53,7 +58,7 @@ class FaceRecognition:
         print(self.sounds)
 
     def generate_prompt(self, person):
-        wordlist = ['welcome', 'good', 'bad', 'handsome', 'happy', 'cheerful', 'puzzled']
+        wordlist = ['welcome', 'sexy', 'bad', 'cunt', 'twat', 'cheerful', 'puzzled']
         words = [wordlist[random.randint(1, len(wordlist)-1)] for _ in range(5)]
         # words.append(person)
         prompt = f'Write a welcome message for {person} using these words: '
@@ -64,7 +69,16 @@ class FaceRecognition:
         return prompt
 
     def generate_text(self, prompt):
-        return self.bot.ask(prompt)
+        try:
+            return self.bot.generate_response(prompt)
+        except openai.error.RateLimitError:
+            return 0
+
+    def play_audio(self, message):
+        audio = gTTS(text=message, lang='en', slow=False, tld='us')
+        audio.save('sounds/example.mp3')
+        playsound.playsound('sounds/example.mp3')
+        os.remove('sounds/example.mp3')
 
     def run_recognition(self):
         video_capture = cv2.VideoCapture(0)
@@ -95,11 +109,14 @@ class FaceRecognition:
                         self.timeout_timer = time.time()
                         self.sound_timeout = True
 
-                        playsound.playsound(self.sounds[best_match_index], block=False)
+                        # playsound.playsound(self.sounds[best_match_index], block=False)
 
                         person = self.known_face_names[best_match_index].split('.')[0]
+
                         message = self.generate_text(self.generate_prompt(person))
-                        print(message)
+                        if message:
+                            print(message)
+                            self.play_audio(message)
 
                     elif time.time() - self.timeout_timer > 10:
                         self.sound_timeout = False
@@ -138,6 +155,9 @@ class FaceRecognition:
 if __name__ == '__main__':
     fr = FaceRecognition()
     fr.run_recognition()
-    bot = ChatGPT()
-    response = bot.ask('U gay boi')
-    print(response)
+    # bot = GPTBot()
+    # response = bot.generate_response('U gay boi')
+    # audio = gTTS(text=response, lang='es', slow=False, tld='us')
+    # audio.save('sounds/example.mp3')
+    # playsound.playsound('sounds/example.mp3')
+    # print(response)
